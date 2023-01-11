@@ -4,5 +4,5 @@ The work in this repo works in the simulation world called vineyard_small_s4_coa
 
 #TO RUN
 - start simulation world
--run roslaunch aj topo_nav.launch
--run rosrun aj grapecounter.py or navigate to folder /aj/scripts and run python grapecounter.py
+- run roslaunch aj topo_nav.launch
+- run rosrun aj grapecounter.py or navigate to folder /aj/scripts and run python grapecounter.py
