@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 
 import rospy
 import actionlib
@@ -14,7 +15,13 @@ from cv_bridge import CvBridge
 
 
 
-class image_converter:
+class grape_counter:
+
+    """
+    This is a class object to initiate the navigation of the thorvald robot to a specified waypoint.
+    It grabs a fixed frame from the waypoint by subscribing to the camera, then passes it to be processed.
+    The image process involves some open cv techniques to mask out and count the grape bunches in the image. 
+    """
 
     speed = 0.3
     total_grapes = 0
@@ -31,16 +38,21 @@ class image_converter:
 
     def __init__(self):
 
+        # self.move("0")
+
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/thorvald_001/kinect2_right_camera/hd/image_color_rect",
                                           Image, self.image_callback)
         self.pub = rospy.Publisher('/thorvald_001/twist_mux/cmd_vel', Twist, queue_size=1)
 
+        
+        
     def unsubscribe(self):
         self.image_sub.unregister()
 
 
-
+    #To go to a certain specified waypoint
+    #Inspiration from https://github.com/LCAS/CMP9767M/blob/master/uol_cmp9767m_tutorial/scripts/set_topo_nav_goal.py
     def goto(self,waypoint,img_data):
         goal = GotoNodeGoal()
         goal.target = "WayPoint"+waypoint
@@ -51,7 +63,7 @@ class image_converter:
         rospy.loginfo("status is %s", status)
         rospy.loginfo("result is %s", result)
         self.image_process(img_data)
-        print("img process")
+        print("image processed")
         self.entry += 1
         self.unsubscribe()
 
@@ -62,74 +74,101 @@ class image_converter:
             self.image_sub = rospy.Subscriber(self.left,
                                         Image, self.image_callback)
 
+    #To go to a point without processing any image
+    #Inspiration from https://github.com/LCAS/CMP9767M/blob/master/uol_cmp9767m_tutorial/scripts/set_topo_nav_goal.py
+    def move(self,waypoint):
+        goal = GotoNodeGoal()
+        goal.target = "WayPoint"+waypoint
+        rospy.loginfo("going to startpoint")
+        client.send_goal(goal)
+        status = client.wait_for_result() # wait until the action is complete
+        result = client.get_result()
+        rospy.loginfo("status is %s", status)
+        rospy.loginfo("result is %s", result)
 
+
+    #The main code runs in this callback, it is the callback for the camera subscriber
     def image_callback(self,data):
-
-        img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
         if len(self.points) > self.entry:
 
-            self.goto(self.points[self.entry], img_data)
+            present_waypoint = self.points[self.entry]
+
+            # To check robot is at a bend and disable image processing
+            if present_waypoint == "12":
+                img_data = 0
+
+            else:
+                img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
+
+            self.goto(present_waypoint, img_data)
         
         else:
             print("Endpoint")
+            self.move("0")
             rospy.signal_shutdown("finished count")
 
 
-        
+    #This function process the fixed image frame gotten from the camera at a particular waypoint
     def image_process(self,image):
-
-        img = image
-        img = cv2.resize(img, None, fx=0.8, fy=0.8, interpolation = cv2.INTER_CUBIC)
         
+        #Check if it is actually an image that is passed
+        if isinstance(image, np.ndarray):
 
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower_range = np.array([75,50,20])
-        upper_range = np.array([160,255,255])
-        mask = cv2.inRange(hsv, lower_range, upper_range)
-        res = cv2.bitwise_and(hsv,hsv, mask= mask)
-        
-        gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-        # Apply thresholding to create a binary image
-        threshold = cv2.threshold(gray, 0, 10, cv2.THRESH_BINARY)[1]
+            img = image
+            img = cv2.resize(img, None, fx=0.8, fy=0.8, interpolation = cv2.INTER_CUBIC)
+            
 
-        # Use morphological operations to remove noise and fill in small gaps
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,4))
-        threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, kernel)
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            lower_range = np.array([75,50,20])
+            upper_range = np.array([160,255,255])
+            mask = cv2.inRange(hsv, lower_range, upper_range)
+            res = cv2.bitwise_and(hsv,hsv, mask= mask)
+            
+            gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+            # Applying thresholding to create a binary image
+            threshold = cv2.threshold(gray, 0, 10, cv2.THRESH_BINARY)[1]
 
-        # Use connected components to label and count the grape bunches
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, 8, cv2.CV_32S)
+            # Using morphological operations to remove noise and fill in small gaps
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,4))
+            threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, kernel)
 
-        # count = 0
-        size_thresh = 1
-        for i in range(1, num_labels):
-            if stats[i, cv2.CC_STAT_AREA] >= size_thresh:
-                #print(stats[i, cv2.CC_STAT_AREA])
-                x = stats[i, cv2.CC_STAT_LEFT]
-                y = stats[i, cv2.CC_STAT_TOP]
-                w = stats[i, cv2.CC_STAT_WIDTH]
-                h = stats[i, cv2.CC_STAT_HEIGHT]
-                # print(x,y,w,h)
-                if w < 25:
-                    pass
-                else:
-                    self.total_grapes +=1
-                    cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), thickness=2)
-                    cv2.putText(img, str(self.total_grapes), (x,y), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255),2)
+            # Using connected components to label and count the grape bunches
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, 8, cv2.CV_32S)
 
-        filename = "test"+str(self.total_grapes)+".jpg"
-        cv2.imwrite(filename, img)
-        # self.total_grapes += count
-        print("Grape Bunches so far:", self.total_grapes)
+            # count = 0
+            size_thresh = 1
+            for i in range(1, num_labels):
+                if stats[i, cv2.CC_STAT_AREA] >= size_thresh:
+                    #print(stats[i, cv2.CC_STAT_AREA])
+                    x = stats[i, cv2.CC_STAT_LEFT]
+                    y = stats[i, cv2.CC_STAT_TOP]
+                    w = stats[i, cv2.CC_STAT_WIDTH]
+                    h = stats[i, cv2.CC_STAT_HEIGHT]
+                    # print(x,y,w,h)
+                    if w < 25:
+                        pass
+                    else:
+                        self.total_grapes +=1
+                        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), thickness=2)
+                        cv2.putText(img, str(self.total_grapes), (x,y), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255),2)
 
-        # cv2.imshow("masked", mask)
-        # cv2.imshow("hsv",res)
-        # print(count)
+            filename = "images/test"+str(self.total_grapes)+".jpg"
+            cv2.imwrite(filename, img)
+            # self.total_grapes += count
+            print("Grape Bunches so far:", self.total_grapes)
 
-        # cv2.waitKey(0)
+            # cv2.imshow("masked", mask)
+            # cv2.imshow("hsv",res)
+            # print(count)
 
-rospy.init_node('image_converter')
+            # cv2.waitKey(0)
+
+        else:
+            pass
+
+rospy.init_node('grape_counter')
 client = actionlib.SimpleActionClient('/thorvald_001/topological_navigation', GotoNodeAction)
 client.wait_for_server()
-ic = image_converter()
+ic = grape_counter()
 rospy.spin()
