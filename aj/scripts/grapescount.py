@@ -29,7 +29,7 @@ class grape_counter:
     move_dist = 2.2
     first = 0
     # points = ["0","1","2","3","4","5"]
-    points = ["0","1","2","3","4","5","12","6","7","8","9","10","11"]
+    points = ["0","1","2","3","4","5","6","7","8","9","10","11"]
     entry = 0
 
     right = "/thorvald_001/kinect2_right_camera/hd/image_color_rect"
@@ -41,9 +41,9 @@ class grape_counter:
         # self.move("0")
 
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/thorvald_001/kinect2_right_camera/hd/image_color_rect",
+        self.image_sub = rospy.Subscriber(self.right,
                                           Image, self.image_callback)
-        self.pub = rospy.Publisher('/thorvald_001/twist_mux/cmd_vel', Twist, queue_size=1)
+        # self.pub = rospy.Publisher('/thorvald_001/twist_mux/cmd_vel', Twist, queue_size=1)
 
         
         
@@ -54,6 +54,9 @@ class grape_counter:
     #To go to a certain specified waypoint
     #Inspiration from https://github.com/LCAS/CMP9767M/blob/master/uol_cmp9767m_tutorial/scripts/set_topo_nav_goal.py
     def goto(self,waypoint,img_data):
+
+        print("Grape Bunches so far:", self.total_grapes)
+        self.unsubscribe()
         goal = GotoNodeGoal()
         goal.target = "WayPoint"+waypoint
         rospy.loginfo("going to %s", goal.target)
@@ -65,7 +68,7 @@ class grape_counter:
         self.image_process(img_data)
         print("image processed")
         self.entry += 1
-        self.unsubscribe()
+        
 
         if self.entry <= 5:
             self.image_sub = rospy.Subscriber(self.right,
@@ -146,7 +149,7 @@ class grape_counter:
                     w = stats[i, cv2.CC_STAT_WIDTH]
                     h = stats[i, cv2.CC_STAT_HEIGHT]
                     # print(x,y,w,h)
-                    if w < 25:
+                    if h < 40:
                         pass
                     else:
                         self.total_grapes +=1
@@ -156,7 +159,7 @@ class grape_counter:
             filename = "images/test"+str(self.total_grapes)+".jpg"
             cv2.imwrite(filename, img)
             # self.total_grapes += count
-            print("Grape Bunches so far:", self.total_grapes)
+            # print("Grape Bunches so far:", self.total_grapes)
 
             # cv2.imshow("masked", mask)
             # cv2.imshow("hsv",res)
