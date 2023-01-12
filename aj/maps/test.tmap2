@@ -347,7 +347,7 @@ nodes:
         z: 0.0
       position:
         x: 7.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
@@ -399,7 +399,7 @@ nodes:
         z: 0.0
       position:
         x: 4.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
@@ -451,7 +451,7 @@ nodes:
         z: 0.0
       position:
         x: 1.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
@@ -503,7 +503,7 @@ nodes:
         z: 0.0
       position:
         x: -1.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
@@ -555,7 +555,7 @@ nodes:
         z: 0.0
       position:
         x: -4.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
@@ -608,7 +608,7 @@ nodes:
         z: 0.0
       position:
         x: -7.5
-        y: -10.5
+        y: -10.1
         z: 0.0
     properties:
       xy_goal_tolerance: 0.3
