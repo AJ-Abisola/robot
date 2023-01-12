@@ -23,14 +23,12 @@ class grape_counter:
     The image process involves some open cv techniques to mask out and count the grape bunches in the image. 
     """
 
-    speed = 0.3
     total_grapes = 0
-    total_dist = 0
-    move_dist = 2.2
-    first = 0
-    # points = ["1","2","3","4","5"]
-    points = ["1","2","3","4","5","6","7","8","9","10","11"]
-    entry = 0
+    first = 0 #to help in subscribing to the first image at a waypoint
+    points = ["0","1","2","3","4","5","6","7","8","9","10","11"] #waypoints
+    entry = 0 #to keep track of when robot gets to waypoint
+    numb = 0 
+    files = [] #save all the file names of images gotten at waypoints
 
     right = "/thorvald_001/kinect2_right_camera/hd/image_color_rect"
     left = "/thorvald_001/kinect2_left_camera/hd/image_color_rect"
@@ -38,14 +36,56 @@ class grape_counter:
 
     def __init__(self):
 
-        self.move("0")
-
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber(self.right,
-                                          Image, self.image_callback)
-        # self.pub = rospy.Publisher('/thorvald_001/twist_mux/cmd_vel', Twist, queue_size=1)
+
+        while len(self.points) > self.entry:
+            
+            self.present_waypoint = self.points[self.entry]
+            self.goto(self.present_waypoint)
+            self.first = 0
+            self.sub()
+            print("subscribed to image")
+
+        else:
+            for _ in self.files:
+                if _ == "image0":
+                    pass
+                else:
+                    img = cv2.imread(_)
+                    self.image_process(img)
+
+
+            print("Endpoint")
+            print("total grapes is:", self.total_grapes)
+            self.move("0")
+            rospy.signal_shutdown("finished count")
+
+    #This subscribes to the camera in use
+    def sub(self):
+
+        if self.entry <= 5:
+            self.image_sub = rospy.Subscriber(self.right,
+                                        Image, self.image_callback1)
+        else:
+            self.image_sub = rospy.Subscriber(self.left,
+                                        Image, self.image_callback1)
 
         
+    #This is the callback for the camera subscriber
+    def image_callback1(self,data):
+
+        if self.first == 0:
+
+            print("in here")
+            img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            filename = "images/image"+str(self.numb)+".jpg"
+            self.files.append(filename)
+            cv2.imwrite(filename, img_data)
+            self.numb += 1
+            print("written")
+            self.first += 1
+
+
         
     def unsubscribe(self):
         self.image_sub.unregister()
@@ -53,10 +93,8 @@ class grape_counter:
 
     #To go to a certain specified waypoint
     #Inspiration from https://github.com/LCAS/CMP9767M/blob/master/uol_cmp9767m_tutorial/scripts/set_topo_nav_goal.py
-    def goto(self,waypoint,img_data):
+    def goto(self,waypoint):
 
-        print("Grape Bunches so far:", self.total_grapes)
-        self.unsubscribe()
         goal = GotoNodeGoal()
         goal.target = "WayPoint"+waypoint
         rospy.loginfo("going to %s", goal.target)
@@ -66,14 +104,6 @@ class grape_counter:
         rospy.loginfo("status is %s", status)
         rospy.loginfo("result is %s", result)
         self.entry += 1
-        
-
-        if self.entry <= 5:
-            self.image_sub = rospy.Subscriber(self.right,
-                                        Image, self.image_callback)
-        else:
-            self.image_sub = rospy.Subscriber(self.left,
-                                        Image, self.image_callback)
 
     #To go to a point without processing any image
     #Inspiration from https://github.com/LCAS/CMP9767M/blob/master/uol_cmp9767m_tutorial/scripts/set_topo_nav_goal.py
@@ -86,30 +116,6 @@ class grape_counter:
         result = client.get_result()
         rospy.loginfo("status is %s", status)
         rospy.loginfo("result is %s", result)
-
-
-    #The main code runs in this callback, it is the callback for the camera subscriber
-    def image_callback(self,data):
-
-        if len(self.points) > self.entry:
-
-            present_waypoint = self.points[self.entry]
-
-            # To check robot is at a bend and disable image processing
-            if present_waypoint == "12":
-                img_data = 0
-
-            else:
-                img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
-
-            self.image_process(img_data)
-            print("image processed")
-            self.goto(present_waypoint, img_data)
-        
-        else:
-            print("Endpoint")
-            self.move("0")
-            rospy.signal_shutdown("finished count")
 
 
     #This function process the fixed image frame gotten from the camera at a particular waypoint
@@ -149,7 +155,7 @@ class grape_counter:
                     w = stats[i, cv2.CC_STAT_WIDTH]
                     h = stats[i, cv2.CC_STAT_HEIGHT]
                     # print(x,y,w,h)
-                    if h < 40:
+                    if h < 30:
                         pass
                     else:
                         self.total_grapes +=1
@@ -158,14 +164,6 @@ class grape_counter:
 
             filename = "images/test"+str(self.total_grapes)+".jpg"
             cv2.imwrite(filename, img)
-            # self.total_grapes += count
-            # print("Grape Bunches so far:", self.total_grapes)
-
-            # cv2.imshow("masked", mask)
-            # cv2.imshow("hsv",res)
-            # print(count)
-
-            # cv2.waitKey(0)
 
         else:
             pass
