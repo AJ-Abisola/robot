@@ -47,13 +47,16 @@ class grape_counter:
             print("subscribed to image")
 
         else:
+            count = 0
             for _ in self.files:
-                if _ == "image0":
+                
+                if count == 0:
+                    count+=1
                     pass
                 else:
-                    img = cv2.imread(_)
-                    self.image_process(img)
-                    print("processed ", _)
+                    # img = cv2.imread(_)
+                    self.image_process(_)
+                    # print("processed ", _)
 
 
             print("Endpoint")
@@ -66,19 +69,19 @@ class grape_counter:
 
         if self.entry <= 5:
             self.image_sub = rospy.Subscriber(self.right,
-                                        Image, self.image_callback1)
+                                        Image, self.image_callback)
         else:
             self.image_sub = rospy.Subscriber(self.left,
-                                        Image, self.image_callback1)
+                                        Image, self.image_callback)
 
         
     #This is the callback for the camera subscriber
-    def image_callback1(self,data):
+    def image_callback(self,data):
 
         if self.first == 0:
             img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
             filename = "images/image"+str(self.numb)+".jpg"
-            self.files.append(filename)
+            self.files.append(img_data)
             cv2.imwrite(filename, img_data)
             self.numb += 1
             self.first += 1
