@@ -28,8 +28,8 @@ class grape_counter:
     total_dist = 0
     move_dist = 2.2
     first = 0
-    # points = ["0","1","2","3","4","5"]
-    points = ["0","1","2","3","4","5","6","7","8","9","10","11"]
+    # points = ["1","2","3","4","5"]
+    points = ["1","2","3","4","5","6","7","8","9","10","11"]
     entry = 0
 
     right = "/thorvald_001/kinect2_right_camera/hd/image_color_rect"
@@ -38,7 +38,7 @@ class grape_counter:
 
     def __init__(self):
 
-        # self.move("0")
+        self.move("0")
 
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber(self.right,
@@ -65,8 +65,6 @@ class grape_counter:
         result = client.get_result()
         rospy.loginfo("status is %s", status)
         rospy.loginfo("result is %s", result)
-        self.image_process(img_data)
-        print("image processed")
         self.entry += 1
         
 
@@ -104,6 +102,8 @@ class grape_counter:
             else:
                 img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
+            self.image_process(img_data)
+            print("image processed")
             self.goto(present_waypoint, img_data)
         
         else:
