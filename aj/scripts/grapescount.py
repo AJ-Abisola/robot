@@ -53,6 +53,7 @@ class grape_counter:
                 else:
                     img = cv2.imread(_)
                     self.image_process(img)
+                    print("processed ", _)
 
 
             print("Endpoint")
@@ -75,14 +76,11 @@ class grape_counter:
     def image_callback1(self,data):
 
         if self.first == 0:
-
-            print("in here")
             img_data = self.bridge.imgmsg_to_cv2(data, "bgr8")
             filename = "images/image"+str(self.numb)+".jpg"
             self.files.append(filename)
             cv2.imwrite(filename, img_data)
             self.numb += 1
-            print("written")
             self.first += 1
 
 
