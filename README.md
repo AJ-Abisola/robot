@@ -1,6 +1,6 @@
 # This is a work on autonomous grape counting in a vineyard using the thorvald robot.
 
-The work in this repo works in the simulation world called vineyard_small_s4_coarse, it can work in other world with some tweaks to the topological map.
+The work in this repo works in the simulation world called vineyard_small_s4_coarse, it can work in other worlds with some tweaks to the topological map.
 
 #TO RUN
 - start simulation world
